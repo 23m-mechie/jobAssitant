@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+data/
+
+# Secrets — never commit these
+credentials.json
+token.json
+.env
+Test_image/

@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Job Application Assistant</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap"
+        rel="stylesheet" />
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #0d0f12;
+            --surface: #13161b;
+            --border: #1f2329;
+            --accent: #c8f135;
+            --accent-dim: #8aaa1f;
+            --text: #e8eaf0;
+            --muted: #5a6070;
+            --danger: #ff5f5f;
+            --radius: 10px;
+        }
+
+        body {
+            font-family: 'DM Mono', monospace;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── Header ── */
+        header {
+            padding: 28px 40px 0;
+            display: flex;
+            align-items: flex-end;
+            gap: 16px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0;
+        }
+
+        .logo {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: 1.35rem;
+            letter-spacing: -0.5px;
+            color: var(--accent);
+            padding-bottom: 20px;
+            flex-shrink: 0;
+        }
+
+        .logo span {
+            color: var(--muted);
+            font-weight: 400;
+        }
+
+        nav {
+            display: flex;
+            gap: 2px;
+            margin-left: auto;
+        }
+
+        nav button {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.78rem;
+            font-weight: 500;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            padding: 12px 22px;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--muted);
+            cursor: pointer;
+            transition: color 0.2s, border-color 0.2s;
+            position: relative;
+            bottom: -1px;
+        }
+
+        nav button:hover {
+            color: var(--text);
+        }
+
+        nav button.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        /* ── Main ── */
+        main {
+            flex: 1;
+            padding: 40px;
+            max-width: 900px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        /* ── Tab panels ── */
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ── Section header ── */
+        .section-header {
+            margin-bottom: 36px;
+        }
+
+        .section-header h1 {
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 1.8rem;
+            letter-spacing: -0.5px;
+            line-height: 1.2;
+        }
+
+        .section-header p {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 0.82rem;
+            line-height: 1.6;
+        }
+
+        /* ── Tag ── */
+        .tag {
+            display: inline-block;
+            background: var(--accent);
+            color: #0d0f12;
+            font-size: 0.65rem;
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+        }
+
+        /* ── Placeholder card ── */
+        .placeholder-card {
+            border: 1px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 48px 36px;
+            text-align: center;
+            color: var(--muted);
+        }
+
+        .placeholder-card .icon {
+            font-size: 2.2rem;
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        .placeholder-card h2 {
+            font-family: 'Syne', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        .placeholder-card p {
+            font-size: 0.8rem;
+            line-height: 1.6;
+            max-width: 380px;
+            margin: 0 auto;
+        }
+
+        /* ── Status bar ── */
+        .status-bar {
+            position: fixed;
+            bottom: 20px;
+            right: 24px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 0.72rem;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--muted);
+            flex-shrink: 0;
+        }
+
+        .status-dot.ok {
+            background: var(--accent);
+        }
+
+        .status-dot.err {
+            background: var(--danger);
+        }
+
+        /* ── Form styles ── */
+        .form-group {
+            margin-bottom: 28px;
+        }
+
+        .form-group label {
+            display: block;
+            font-family: 'Syne', sans-serif;
+            font-weight: 600;
+            font-size: 0.88rem;
+            margin-bottom: 4px;
+            color: var(--text);
+        }
+
+        .label-hint {
+            display: block;
+            font-size: 0.72rem;
+            color: var(--muted);
+            margin-bottom: 10px;
+        }
+
+        .form-group textarea {
+            width: 100%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            font-family: 'DM Mono', monospace;
+            font-size: 0.82rem;
+            padding: 14px 16px;
+            resize: vertical;
+            line-height: 1.7;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+
+        .form-group textarea::placeholder {
+            color: var(--muted);
+            opacity: 0.5;
+        }
+
+        .form-group textarea:focus {
+            border-color: var(--accent-dim);
+            box-shadow: 0 0 0 3px rgba(200, 241, 53, 0.08);
+        }
+
+        /* ── Upload zone ── */
+        .upload-zone {
+            border: 1px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 32px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.dragover {
+            border-color: var(--accent-dim);
+            background: rgba(200, 241, 53, 0.03);
+        }
+
+        .upload-icon {
+            font-size: 1.8rem;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .upload-text {
+            font-size: 0.82rem;
+            color: var(--muted);
+        }
+
+        .upload-link {
+            color: var(--accent);
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            cursor: pointer;
+        }
+
+        .upload-hint {
+            font-size: 0.7rem;
+            color: var(--muted);
+            opacity: 0.6;
+            margin-top: 6px;
+        }
+
+        .upload-filename {
+            font-size: 0.85rem;
+            color: var(--text);
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .upload-size {
+            font-size: 0.72rem;
+            color: var(--muted);
+            margin-bottom: 10px;
+        }
+
+        .upload-replace {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--accent);
+            background: transparent;
+            border: 1px solid var(--accent-dim);
+            border-radius: 6px;
+            padding: 5px 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .upload-replace:hover {
+            background: rgba(200, 241, 53, 0.08);
+        }
+
+        /* ── Buttons ── */
+        .form-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-top: 8px;
+        }
+
+        .btn-primary {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.82rem;
+            font-weight: 500;
+            letter-spacing: 0.03em;
+            background: var(--accent);
+            color: #0d0f12;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 28px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.97);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(13, 15, 18, 0.3);
+            border-top-color: #0d0f12;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .save-status {
+            font-size: 0.78rem;
+            color: var(--accent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .save-status.show {
+            opacity: 1;
+        }
+
+        /* ── Toast ── */
+        .toast {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-size: 0.78rem;
+            color: var(--text);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transform: translateY(-20px);
+            opacity: 0;
+            transition: transform 0.3s, opacity 0.3s;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.error {
+            border-color: var(--danger);
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="logo">apply<span>.ai</span></div>
+        <nav>
+            <button class="active" onclick="switchTab('profile', this)">Profile</button>
+            <button onclick="switchTab('application', this)">New Application</button>
+            <button onclick="switchTab('formqa', this)">Form Q&amp;A</button>
+        </nav>
+    </header>
+
+    <main>
+
+        <!-- PROFILE TAB -->
+        <div id="tab-profile" class="tab-panel active">
+            <div class="section-header">
+                <div class="tag">Setup</div>
+                <h1>Your Profile</h1>
+                <p>Paste your experience, projects and cover letter once. Saved locally — used for every application.</p>
+            </div>
+
+            <form id="profile-form" autocomplete="off">
+                <div class="form-group">
+                    <label for="work-experience">Work Experience</label>
+                    <span class="label-hint">Roles, companies, durations — one per line or freeform</span>
+                    <textarea id="work-experience" rows="6" placeholder="e.g. Software Engineer @ Google (2022–2024)&#10;Built microservices handling 10M req/day..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="projects">Projects</label>
+                    <span class="label-hint">Side projects, open-source, academic — with tech stack</span>
+                    <textarea id="projects" rows="6" placeholder="e.g. ChatBot Platform — React, FastAPI, Redis&#10;Real-time AI chatbot with 5k daily users..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="cover-letter">Cover Letter Template</label>
+                    <span class="label-hint">Your base cover letter — AI will adapt it per job</span>
+                    <textarea id="cover-letter" rows="8" placeholder="Dear Hiring Manager,&#10;&#10;I am writing to express my interest in..."></textarea>
+                </div>
+
+                <!-- Resume Upload -->
+                <div class="form-group">
+                    <label>Resume (PDF)</label>
+                    <span class="label-hint">Attached automatically to every application email</span>
+                    <div class="upload-zone" id="upload-zone">
+                        <input type="file" id="resume-input" accept=".pdf" hidden />
+                        <div class="upload-content" id="upload-content">
+                            <span class="upload-icon">📄</span>
+                            <p class="upload-text">Drop your PDF here or <span class="upload-link">browse</span></p>
+                            <p class="upload-hint">PDF only · max 10 MB</p>
+                        </div>
+                        <div class="upload-success" id="upload-success" style="display:none;">
+                            <span class="upload-icon">✅</span>
+                            <p class="upload-filename" id="upload-filename">resume.pdf</p>
+                            <p class="upload-size" id="upload-size">—</p>
+                            <button type="button" class="upload-replace" id="upload-replace">Replace</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gmail Connection -->
+                <div class="form-group" style="margin-top: 40px;">
+                    <label>Gmail Connection</label>
+                    <span class="label-hint">Used to send application emails with your resume attached</span>
+                    <div class="gmail-card" id="gmail-card" style="border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; background: var(--surface);">
+                        <div id="gmail-disconnected">
+                             <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+                                <div>
+                                    <h2 style="font-family: 'Syne', sans-serif; font-size: 1rem; margin-bottom: 4px;">Not Connected</h2>
+                                    <p style="margin: 0; font-size: 0.75rem; color: var(--muted);">Authorize this app to send emails on your behalf.</p>
+                                </div>
+                                <button type="button" class="btn-primary" id="connect-gmail-btn" onclick="connectGmail()" style="padding: 10px 20px;">
+                                    <span class="btn-label">Connect</span>
+                                    <span class="btn-spinner" id="gmail-spinner" style="display:none;"></span>
+                                </button>
+                             </div>
+                        </div>
+                        <div id="gmail-connected" style="display: none;">
+                             <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+                                <div>
+                                    <h2 style="font-family: 'Syne', sans-serif; font-size: 1rem; margin-bottom: 4px; color: var(--accent);">✓ Connected</h2>
+                                    <p style="margin: 0; font-size: 0.85rem; color: var(--text); font-family: 'DM Mono', monospace;" id="gmail-email">user@gmail.com</p>
+                                </div>
+                                <button type="button" class="upload-replace" style="border-color: #ff5f5f; color: #ff5f5f;" onclick="disconnectGmail()">Disconnect</button>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary" id="save-btn">
+                        <span class="btn-label">Save Profile</span>
+                        <span class="btn-spinner" id="save-spinner" style="display:none;"></span>
+                    </button>
+                    <span class="save-status" id="save-status"></span>
+                </div>
+            </form>
+        </div>
+
+        <!-- NEW APPLICATION TAB -->
+        <div id="tab-application" class="tab-panel">
+            <div class="section-header">
+                <div class="tag">Core</div>
+                <h1>New Application</h1>
+                <p>Upload JD screenshots → AI extracts details → drafts your email → you approve → sent.</p>
+            </div>
+            
+            <div id="jd-upload-step">
+                <div class="form-group">
+                    <label>JD Screenshots</label>
+                    <span class="label-hint">Upload 1-3 screenshots of the job posting (LinkedIn, Indeed, etc.)</span>
+                    <div class="upload-zone" id="jd-upload-zone" style="min-height: 180px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                        <input type="file" id="jd-input" accept="image/*" multiple hidden />
+                        <div id="jd-upload-placeholder">
+                            <span class="upload-icon" style="font-size: 2.5rem; display: block; margin-bottom: 10px;">📸</span>
+                            <p class="upload-text">Drop screenshots here or <span class="upload-link">browse</span></p>
+                            <p class="upload-hint">PNG, JPG · 1-3 images</p>
+                        </div>
+                        <div id="jd-previews" style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 16px;"></div>
+                    </div>
+                </div>
+                <div class="form-actions" id="jd-extract-actions" style="display: none; justify-content: center;">
+                    <button type="button" class="btn-primary" id="jd-extract-btn" onclick="extractJD()">
+                        <span class="btn-label">Extract Details with AI</span>
+                        <span class="btn-spinner" id="jd-spinner" style="display:none;"></span>
+                    </button>
+                    <button type="button" class="upload-replace" onclick="resetJD()">Clear</button>
+                </div>
+            </div>
+
+            <!-- Extracted Results -->
+            <div id="jd-result-step" style="display: none; border-top: 1px solid var(--border); padding-top: 32px; margin-top: 32px; animation: fadeIn 0.3s ease;">
+                <div class="tag" style="background: var(--accent-dim); margin-bottom: 20px;">Review Extraction</div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="form-group">
+                        <label>Job Title</label>
+                        <input type="text" id="result-title" style="width:100%; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none;" />
+                    </div>
+                    <div class="form-group">
+                        <label>Company</label>
+                        <input type="text" id="result-company" style="width:100%; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none;" />
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Recipient Email</label>
+                    <span class="label-hint">Where the application will be sent</span>
+                    <input type="text" id="result-email" placeholder="e.g. hr@company.com" style="width:100%; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none;" />
+                </div>
+                
+                <div class="form-group">
+                    <label>Requirements Summary</label>
+                    <span class="label-hint">Key skills and experience extracted from the JD</span>
+                    <textarea id="result-requirements" rows="6" style="width:100%; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none; line-height: 1.6;"></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn-primary" id="generate-draft-btn" onclick="proceedToDraft()">
+                        <span class="btn-label">Next: Generate Draft</span>
+                        <span class="btn-spinner" id="draft-spinner" style="display:none;"></span>
+                    </button>
+                    <button type="button" class="upload-replace" onclick="resetJD()">Discard</button>
+                </div>
+            </div>
+
+            <!-- Email Draft Step -->
+            <div id="jd-draft-step" style="display: none; border-top: 1px solid var(--border); padding-top: 32px; margin-top: 32px; animation: fadeIn 0.3s ease;">
+                <div class="tag" style="background: #a970ff; margin-bottom: 20px;">Review Draft</div>
+                
+                <div class="form-group">
+                    <label>To:</label>
+                    <input type="text" id="draft-to-email" style="width:100%; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none; margin-bottom: 20px;" />
+                </div>
+                
+                <div class="form-group">
+                    <label>Subject:</label>
+                    <input type="text" id="draft-subject" style="width:100%; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none; margin-bottom: 20px;" />
+                </div>
+                
+                <div class="form-group" style="position: relative;">
+                    <label>Email Body</label>
+                    <span class="label-hint">Customize as needed before sending</span>
+                    <textarea id="draft-body" rows="12" style="width:100%; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none; line-height: 1.6;"></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn-primary" id="send-email-btn" onclick="sendApplicationEmail()" style="background: #a970ff; color: #fff;">
+                        <span class="btn-label">Send Application</span>
+                        <span class="btn-spinner" id="send-spinner" style="display:none; border-top-color: #fff;"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- FORM Q&A TAB -->
+        <div id="tab-formqa" class="tab-panel">
+            <div class="section-header">
+                <div class="tag">Bonus</div>
+                <h1>Form Q&amp;A</h1>
+                <p>Paste Google Form questions — AI answers them using your profile. Copy and fill.</p>
+            </div>
+            
+            <div class="form-group" style="position: relative;">
+                <label>Paste Questions Here</label>
+                <span class="label-hint">Copy-paste the raw text of the application form questions</span>
+                <textarea id="qa-input" rows="8" style="width:100%; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none; line-height: 1.6;" placeholder="1. What is your biggest engineering achievement?&#10;2. Why do you want to join our company?"></textarea>
+            </div>
+            
+            <div class="form-actions" style="margin-bottom: 40px;">
+                <button type="button" class="btn-primary" id="generate-qa-btn" onclick="answerFormQuestions()">
+                    <span class="btn-label">Generate Answers</span>
+                    <span class="btn-spinner" id="qa-spinner" style="display:none;"></span>
+                </button>
+            </div>
+
+            <div id="qa-results" style="display: none; animation: fadeIn 0.3s ease;">
+                <div class="tag" style="background: var(--accent-dim); margin-bottom: 20px;">AI Answers</div>
+                <div id="qa-cards-container" style="display: flex; flex-direction: column; gap: 20px;">
+                    <!-- Cards will be injected here -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Status bar -->
+    <div class="status-bar">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-text">Checking connection…</span>
+    </div>
+
+    <!-- Toast container -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ── Tab switching ──
+        function switchTab(name, btn) {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + name).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        // ── Toast ──
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast' + (isError ? ' error' : '');
+            // trigger reflow then show
+            requestAnimationFrame(() => {
+                toast.classList.add('show');
+            });
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // ── Format bytes ──
+        function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+
+        // ── Profile: Load ──
+        async function loadProfile() {
+            try {
+                const res = await fetch('/api/profile');
+                const data = await res.json();
+                document.getElementById('work-experience').value = data.work_experience || '';
+                document.getElementById('projects').value = data.projects || '';
+                document.getElementById('cover-letter').value = data.cover_letter || '';
+            } catch (e) {
+                console.error('Failed to load profile:', e);
+            }
+        }
+
+        // ── Profile: Save ──
+        async function saveProfile() {
+            const btn = document.getElementById('save-btn');
+            const spinner = document.getElementById('save-spinner');
+            const label = btn.querySelector('.btn-label');
+            const status = document.getElementById('save-status');
+
+            btn.disabled = true;
+            spinner.style.display = 'inline-block';
+            label.textContent = 'Saving…';
+
+            try {
+                const body = {
+                    work_experience: document.getElementById('work-experience').value,
+                    projects: document.getElementById('projects').value,
+                    cover_letter: document.getElementById('cover-letter').value,
+                };
+
+                const res = await fetch('/api/profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+
+                if (!res.ok) throw new Error('Save failed');
+
+                showToast('✓ Profile saved');
+                status.textContent = 'Saved just now';
+                status.classList.add('show');
+                setTimeout(() => status.classList.remove('show'), 4000);
+            } catch (e) {
+                showToast('✗ Failed to save profile', true);
+            } finally {
+                btn.disabled = false;
+                spinner.style.display = 'none';
+                label.textContent = 'Save Profile';
+            }
+        }
+
+        // ── Resume: Upload ──
+        async function uploadResume(file) {
+            if (!file || !file.name.toLowerCase().endsWith('.pdf')) {
+                showToast('Please select a PDF file', true);
+                return;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                showToast('File too large — max 10 MB', true);
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/api/resume', { method: 'POST', body: formData });
+                if (!res.ok) throw new Error('Upload failed');
+                const data = await res.json();
+                showResumeUploaded(data.filename, data.size_bytes);
+                showToast('✓ Resume uploaded');
+            } catch (e) {
+                showToast('✗ Failed to upload resume', true);
+            }
+        }
+
+        function showResumeUploaded(filename, sizeBytes) {
+            document.getElementById('upload-content').style.display = 'none';
+            document.getElementById('upload-success').style.display = 'block';
+            document.getElementById('upload-filename').textContent = filename || 'resume.pdf';
+            document.getElementById('upload-size').textContent = formatBytes(sizeBytes);
+        }
+
+        // ── Resume: Check status on load ──
+        async function checkResumeStatus() {
+            try {
+                const res = await fetch('/api/resume/status');
+                const data = await res.json();
+                if (data.exists) {
+                    showResumeUploaded('resume.pdf', data.size_bytes);
+                }
+            } catch (e) {
+                console.error('Failed to check resume status:', e);
+            }
+        }
+
+        // ── Wire up upload zone ──
+        const uploadZone = document.getElementById('upload-zone');
+        const resumeInput = document.getElementById('resume-input');
+
+        uploadZone.addEventListener('click', () => {
+            // Don't trigger file pick if clicking Replace button
+            resumeInput.click();
+        });
+
+        resumeInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) uploadResume(e.target.files[0]);
+        });
+
+        // Drag and drop
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) uploadResume(file);
+        });
+
+        // Replace button
+        document.getElementById('upload-replace').addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('upload-content').style.display = 'block';
+            document.getElementById('upload-success').style.display = 'none';
+            resumeInput.value = '';
+            resumeInput.click();
+        });
+
+        // ── Form submit ──
+        document.getElementById('profile-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveProfile();
+        });
+
+        // ── Gmail: Status ──
+        async function checkGmailStatus() {
+            try {
+                const res = await fetch('/api/gmail/status');
+                const data = await res.json();
+                const connectedDiv = document.getElementById('gmail-connected');
+                const disconnectedDiv = document.getElementById('gmail-disconnected');
+                const emailSpan = document.getElementById('gmail-email');
+
+                if (data.connected) {
+                    connectedDiv.style.display = 'block';
+                    disconnectedDiv.style.display = 'none';
+                    emailSpan.textContent = data.email;
+                    return true;
+                } else {
+                    connectedDiv.style.display = 'none';
+                    disconnectedDiv.style.display = 'block';
+                    return false;
+                }
+            } catch (e) {
+                console.error('Failed to check Gmail status:', e);
+                return false;
+            }
+        }
+
+        // ── Gmail: Connect ──
+        async function connectGmail() {
+            const btn = document.getElementById('connect-gmail-btn');
+            const spinner = document.getElementById('gmail-spinner');
+            const label = btn.querySelector('.btn-label');
+
+            btn.disabled = true;
+            spinner.style.display = 'inline-block';
+            label.textContent = 'Auth…';
+
+            showToast('Opening browser for Google login...');
+
+            try {
+                const res = await fetch('/api/gmail/connect', { method: 'POST' });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || 'Connection failed');
+                }
+                
+                await checkGmailStatus();
+                showToast('✓ Gmail connected successfully');
+                checkHealth(); // Update status bar
+            } catch (e) {
+                showToast('✗ ' + e.message, true);
+                console.error(e);
+            } finally {
+                btn.disabled = false;
+                spinner.style.display = 'none';
+                label.textContent = 'Connect';
+            }
+        }
+
+        // ── Gmail: Disconnect ──
+        async function disconnectGmail() {
+            if (!confirm('Disconnect Gmail and delete saved token?')) return;
+            
+            try {
+                await fetch('/api/gmail/disconnect', { method: 'POST' });
+                await checkGmailStatus();
+                showToast('Gmail disconnected');
+                checkHealth(); // Update status bar
+            } catch (e) {
+                showToast('✗ Failed to disconnect', true);
+            }
+        }
+
+        // ── Health check ──
+        async function checkHealth() {
+            try {
+                const res = await fetch('/api/health');
+                const data = await res.json();
+                const dot = document.getElementById('status-dot');
+                const txt = document.getElementById('status-text');
+                
+                // Also check Gmail status specifically for the email
+                const gmailRes = await fetch('/api/gmail/status');
+                const gmailData = await gmailRes.json();
+
+                if (data.status === 'ok') {
+                    dot.classList.add('ok');
+                    let statusParts = [];
+                    statusParts.push(data.gemini_key_set ? 'Gemini OK' : 'Gemini Key Missing');
+                    statusParts.push(gmailData.connected ? 'Gmail OK' : 'Gmail Not Connected');
+                    txt.textContent = statusParts.join(' · ');
+                }
+            } catch {
+                const dot = document.getElementById('status-dot');
+                dot.classList.add('err');
+                document.getElementById('status-text').textContent = 'Cannot reach server';
+            }
+        }
+
+        // ── JD: Upload Handling ──
+        const jdZone = document.getElementById('jd-upload-zone');
+        const jdInput = document.getElementById('jd-input');
+        const jdPreviews = document.getElementById('jd-previews');
+        const jdActions = document.getElementById('jd-extract-actions');
+        let selectedFiles = [];
+
+        jdZone.addEventListener('click', (e) => {
+            if (e.target.closest('.upload-replace')) return;
+            jdInput.click();
+        });
+
+        jdInput.addEventListener('change', (e) => {
+            handleJDFiles(e.target.files);
+        });
+
+        jdZone.addEventListener('dragover', (e) => { e.preventDefault(); jdZone.classList.add('dragover'); });
+        jdZone.addEventListener('dragleave', () => jdZone.classList.remove('dragover'));
+        jdZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            jdZone.classList.remove('dragover');
+            handleJDFiles(e.dataTransfer.files);
+        });
+
+        function handleJDFiles(files) {
+            const newFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+            if (newFiles.length === 0) return;
+            
+            selectedFiles = [...selectedFiles, ...newFiles].slice(0, 3);
+            renderPreviews();
+            jdActions.style.display = 'flex';
+            document.getElementById('jd-upload-placeholder').style.display = selectedFiles.length > 0 ? 'none' : 'block';
+        }
+
+        function renderPreviews() {
+            jdPreviews.innerHTML = '';
+            selectedFiles.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const div = document.createElement('div');
+                    div.style.position = 'relative';
+                    div.innerHTML = `
+                        <img src="${e.target.result}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border);" />
+                        <button onclick="removeJDFile(${index})" style="position: absolute; top: -5px; right: -5px; background: var(--danger); color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer;">×</button>
+                    `;
+                    jdPreviews.appendChild(div);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function removeJDFile(index) {
+            selectedFiles.splice(index, 1);
+            renderPreviews();
+            if (selectedFiles.length === 0) {
+                resetJD();
+            }
+        }
+
+        function resetJD() {
+            selectedFiles = [];
+            jdPreviews.innerHTML = '';
+            jdInput.value = '';
+            jdActions.style.display = 'none';
+            document.getElementById('jd-upload-step').style.display = 'block';
+            document.getElementById('jd-result-step').style.display = 'none';
+            document.getElementById('jd-upload-placeholder').style.display = 'block';
+            
+            // Clear results
+            document.getElementById('result-title').value = '';
+            document.getElementById('result-company').value = '';
+            document.getElementById('result-email').value = '';
+            document.getElementById('result-requirements').value = '';
+            
+            document.getElementById('jd-draft-step').style.display = 'none';
+            document.getElementById('draft-to-email').value = '';
+            document.getElementById('draft-subject').value = '';
+            document.getElementById('draft-body').value = '';
+        }
+
+        // ── JD: AI Extraction ──
+        async function extractJD() {
+            if (selectedFiles.length === 0) return;
+
+            const btn = document.getElementById('jd-extract-btn');
+            const spinner = document.getElementById('jd-spinner');
+            const label = btn.querySelector('.btn-label');
+
+            btn.disabled = true;
+            spinner.style.display = 'inline-block';
+            label.textContent = 'Analyzing...';
+
+            const formData = new FormData();
+            selectedFiles.forEach(file => formData.append('files', file));
+
+            try {
+                const res = await fetch('/api/extract-jd', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!res.ok) throw new Error('Extraction failed');
+
+                const data = await res.json();
+                
+                document.getElementById('result-title').value = data.job_title || '';
+                document.getElementById('result-company').value = data.company || '';
+                document.getElementById('result-email').value = data.recipient_email || '';
+                document.getElementById('result-requirements').value = data.requirements || '';
+
+                document.getElementById('jd-upload-step').style.display = 'none';
+                document.getElementById('jd-result-step').style.display = 'block';
+                showToast('✓ Extraction complete');
+            } catch (e) {
+                showToast('✗ AI extraction failed', true);
+                console.error(e);
+            } finally {
+                btn.disabled = false;
+                spinner.style.display = 'none';
+                label.textContent = 'Extract Details with AI';
+            }
+        }
+
+        async function proceedToDraft() {
+            const title = document.getElementById('result-title').value;
+            const company = document.getElementById('result-company').value;
+            const requirements = document.getElementById('result-requirements').value;
+            const email = document.getElementById('result-email').value;
+            
+            if (!title && !company && !requirements) {
+                showToast('Please extract JD details first', true);
+                return;
+            }
+
+            const btn = document.getElementById('generate-draft-btn');
+            const spinner = document.getElementById('draft-spinner');
+            const label = btn.querySelector('.btn-label');
+
+            btn.disabled = true;
+            spinner.style.display = 'inline-block';
+            label.textContent = 'Drafting...';
+            
+            try {
+                const res = await fetch('/api/generate-draft', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        job_title: title,
+                        company: company,
+                        requirements: requirements
+                    })
+                });
+
+                if (!res.ok) throw new Error('API failed');
+
+                const data = await res.json();
+                
+                let rawDraft = data.draft_text || '';
+                let subject = '';
+                
+                // Super basic check to parse Subject out of draft text
+                let lines = rawDraft.split('\n');
+                if (lines[0].toLowerCase().startsWith('subject:')) {
+                    subject = lines[0].replace(/subject:\s*/i, '').trim();
+                    rawDraft = lines.slice(1).join('\n').trim();
+                }
+
+                document.getElementById('draft-to-email').value = email || '';
+                document.getElementById('draft-subject').value = subject || `Application for ${title} at ${company}`;
+                document.getElementById('draft-body').value = rawDraft;
+                
+                document.getElementById('jd-draft-step').style.display = 'block';
+                // Scroll to draft step
+                document.getElementById('jd-draft-step').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                showToast('✓ Draft generated successfully');
+            } catch (e) {
+                showToast('✗ Draft generation failed', true);
+                console.error(e);
+            } finally {
+                btn.disabled = false;
+                spinner.style.display = 'none';
+                label.textContent = 'Next: Generate Draft';
+            }
+        }
+        
+        async function sendApplicationEmail() {
+            const btn = document.getElementById('send-email-btn');
+            const spinner = document.getElementById('send-spinner');
+            const label = btn.querySelector('.btn-label');
+            
+            const to = document.getElementById('draft-to-email').value;
+            const subject = document.getElementById('draft-subject').value;
+            const body = document.getElementById('draft-body').value;
+            
+            if (!to) {
+                showToast('Please provide a recipient email', true);
+                return;
+            }
+
+            btn.disabled = true;
+            spinner.style.display = 'inline-block';
+            label.textContent = 'Sending...';
+            
+            try {
+                const res = await fetch('/api/send-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        to_email: to,
+                        subject: subject,
+                        body: body
+                    })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || 'Failed to send email');
+                }
+
+                showToast('🚀 Email sent successfully!');
+                
+                // Wait briefly, then reset the flow
+                setTimeout(() => {
+                    resetJD();
+                    document.getElementById('jd-upload-step').scrollIntoView({ behavior: 'smooth' });
+                }, 2000);
+            } catch (e) {
+                showToast('✗ ' + e.message, true);
+                console.error(e);
+            } finally {
+                btn.disabled = false;
+                spinner.style.display = 'none';
+                label.textContent = 'Send Application';
+            }
+        }
+
+        // ── Form Q&A ──
+        async function answerFormQuestions() {
+            const input = document.getElementById('qa-input').value.trim();
+            if(!input) {
+                showToast("Please paste some questions first", true);
+                return;
+            }
+            
+            const btn = document.getElementById('generate-qa-btn');
+            const spinner = document.getElementById('qa-spinner');
+            const label = btn.querySelector('.btn-label');
+            const resultsDiv = document.getElementById('qa-results');
+            const container = document.getElementById('qa-cards-container');
+            
+            btn.disabled = true;
+            spinner.style.display = 'inline-block';
+            label.textContent = 'Analyzing...';
+            resultsDiv.style.display = 'none';
+            container.innerHTML = '';
+            
+            try {
+                const res = await fetch('/api/form-qa', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ questions: input })
+                });
+
+                if (!res.ok) throw new Error('API failed');
+
+                const data = await res.json();
+                const answers = data.answers || [];
+                
+                if(answers.length === 0) {
+                    showToast("No questions identified", true);
+                    return;
+                }
+                
+                answers.forEach((item, index) => {
+                    const card = document.createElement('div');
+                    card.style.background = 'var(--surface)';
+                    card.style.border = '1px solid var(--border)';
+                    card.style.borderRadius = 'var(--radius)';
+                    card.style.padding = '20px';
+                    
+                    const copyId = `qa-ans-${index}`;
+                    
+                    card.innerHTML = `
+                        <h3 style="font-family:'Syne', sans-serif; font-size: 0.95rem; margin-bottom: 12px; color: var(--accent);">${item.question}</h3>
+                        <div style="position: relative;">
+                            <textarea id="${copyId}" rows="4" style="width:100%; padding:14px; background:#0d0f12; border:1px solid #1f2329; border-radius:6px; color:var(--text); font-family:inherit; outline:none; line-height:1.5;">${item.answer}</textarea>
+                            <button type="button" onclick="copyToClipboard('${copyId}')" style="position:absolute; top:8px; right:8px; background:var(--accent); color:#0d0f12; font-family:'DM Mono', monospace; font-size:0.7rem; font-weight:bold; padding:4px 8px; border:none; border-radius:4px; cursor:pointer;">Copy</button>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+                
+                resultsDiv.style.display = 'block';
+                showToast('✓ Answers generated');
+            } catch (e) {
+                showToast('✗ Failed to generate answers', true);
+                console.error(e);
+            } finally {
+                btn.disabled = false;
+                spinner.style.display = 'none';
+                label.textContent = 'Generate Answers';
+            }
+        }
+        
+        function copyToClipboard(elementId) {
+            const el = document.getElementById(elementId);
+            el.select();
+            document.execCommand('copy');
+            showToast('✓ Copied to clipboard');
+            // clear selection
+            window.getSelection().removeAllRanges();
+        }
+
+        // ── Init ──
+        checkHealth();
+        loadProfile();
+        checkResumeStatus();
+        checkGmailStatus();
+    </script>
+
+</body>
+
+</html>
