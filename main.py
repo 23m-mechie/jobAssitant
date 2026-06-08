@@ -31,7 +31,7 @@ GMAIL_SCOPES = [
     "https://www.googleapis.com/auth/userinfo.email",
     "openid"
 ]
-w
+
 # Configure Gemini
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel("gemini-3.5-flash")
