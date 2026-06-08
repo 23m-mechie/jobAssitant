@@ -6,4 +6,4 @@ data/
 credentials.json
 token.json
 .env
-test/
+test/screenshots
