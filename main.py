@@ -4,7 +4,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google_auth_oauthlib.flow import Flow
 from google.auth.transport.requests import Request
 import google.generativeai as genai
 import json
@@ -13,17 +13,64 @@ import base64
 import mimetypes
 from email.message import EmailMessage
 from googleapiclient.discovery import build
-from typing import List
+from typing import List, Optional
+import jwt
+from fastapi import Depends, HTTPException, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from google.cloud import storage
 
 load_dotenv()
 
 app = FastAPI(title="Job Application Assistant")
 
 DATA_DIR = "data"
-PROFILE_PATH = os.path.join(DATA_DIR, "profile.json")
-RESUME_PATH = os.path.join(DATA_DIR, "resume.pdf")
+GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
+JWT_SECRET = os.getenv("JWT_SECRET", "super-secret-key-12345")
 CREDENTIALS_PATH = "credentials.json"
-TOKEN_PATH = "token.json"
+security = HTTPBearer()
+
+# Initialize GCS client if bucket is set
+project_id = os.getenv("GOOGLE_PROJECT_ID")
+storage_client = storage.Client(project=project_id) if GCS_BUCKET_NAME else None
+
+def get_bucket():
+    if not storage_client or not GCS_BUCKET_NAME:
+        raise HTTPException(status_code=500, detail="GCS_BUCKET_NAME is not configured")
+    return storage_client.bucket(GCS_BUCKET_NAME)
+
+def read_gcs(path: str) -> Optional[bytes]:
+    try:
+        blob = get_bucket().blob(path)
+        if blob.exists():
+            return blob.download_as_bytes()
+    except Exception as e:
+        print(f"GCS Read Error ({path}): {e}")
+    return None
+
+def write_gcs(path: str, data: bytes, content_type: str = "application/octet-stream"):
+    try:
+        blob = get_bucket().blob(path)
+        blob.upload_from_string(data, content_type=content_type)
+    except Exception as e:
+        print(f"GCS Write Error ({path}): {e}")
+
+def delete_gcs(path: str):
+    try:
+        blob = get_bucket().blob(path)
+        if blob.exists():
+            blob.delete()
+    except Exception as e:
+        pass
+
+def get_current_user(credentials: HTTPAuthorizationCredentials = Security(security)) -> str:
+    try:
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=["HS256"])
+        email = payload.get("email")
+        if not email:
+            raise HTTPException(status_code=401, detail="Invalid token payload")
+        return email
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 # Gmail API scopes
 GMAIL_SCOPES = [
@@ -44,6 +91,9 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ── Profile model ──
 class ProfileData(BaseModel):
+    name: str = ""
+    phone: str = ""
+    linkedin: str = ""
     work_experience: str = ""
     projects: str = ""
     cover_letter: str = ""
@@ -62,24 +112,27 @@ class FormQARequest(BaseModel):
     questions: str
 
 # ── Gmail helpers ──
-def get_gmail_creds():
-    """Load saved credentials, refresh if expired, return None if not authenticated."""
-    if not os.path.exists(TOKEN_PATH):
+def get_gmail_creds(email: str):
+    """Load saved credentials from GCS, refresh if expired."""
+    token_path = f"users/{email}/token.json"
+    token_data = read_gcs(token_path)
+    if not token_data:
         return None
-    creds = Credentials.from_authorized_user_file(TOKEN_PATH, GMAIL_SCOPES)
-    if creds and creds.expired and creds.refresh_token:
-        try:
+    
+    try:
+        creds_dict = json.loads(token_data.decode('utf-8'))
+        creds = Credentials.from_authorized_user_info(creds_dict, GMAIL_SCOPES)
+        if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
-            with open(TOKEN_PATH, "w") as f:
-                f.write(creds.to_json())
-        except Exception:
-            return None
-    return creds if creds and creds.valid else None
+            write_gcs(token_path, creds.to_json().encode('utf-8'), "application/json")
+        return creds if creds and creds.valid else None
+    except Exception:
+        return None
 
 
-def get_gmail_service():
+def get_gmail_service(email: str):
     """Build Gmail API service from valid credentials."""
-    creds = get_gmail_creds()
+    creds = get_gmail_creds(email)
     if not creds:
         return None
     try:
@@ -97,56 +150,74 @@ async def root():
 
 @app.get("/api/health")
 async def health():
-    gmail_ok = get_gmail_creds() is not None
     return {
         "status": "ok",
         "gemini_key_set": bool(os.getenv("GEMINI_API_KEY")),
-        "gmail_connected": gmail_ok,
+        "gcs_bucket_set": bool(GCS_BUCKET_NAME)
     }
 
 
 @app.get("/api/gmail/status")
-async def gmail_status():
-    creds = get_gmail_creds()
+async def gmail_status(email: str = Depends(get_current_user)):
+    creds = get_gmail_creds(email)
     if not creds:
         return {"connected": False}
-    try:
-        # Try to get email using the oauth2 service (requires userinfo.email scope)
-        oauth2_service = build("oauth2", "v2", credentials=creds)
-        user_info = oauth2_service.userinfo().get().execute()
-        return {"connected": True, "email": user_info.get("email", "Connected")}
-    except Exception as e:
-        # Fallback: If we can't get the email but creds exist, still show as connected
-        # unless it's a definite auth error
-        if "insufficient authentication scopes" in str(e).lower():
-            return {"connected": True, "email": "Connected (re-auth for email)"}
-        return {"connected": False, "error": str(e)}
+    return {"connected": True, "email": email}
+
+
+class AuthCodeRequest(BaseModel):
+    code: str
+    redirect_uri: str
+    code_verifier: str
+
+@app.get("/api/gmail/auth-url")
+async def gmail_auth_url(redirect_uri: str):
+    if not os.path.exists(CREDENTIALS_PATH):
+        return JSONResponse(status_code=400, content={"error": "credentials.json missing on server"})
+    flow = Flow.from_client_secrets_file(CREDENTIALS_PATH, scopes=GMAIL_SCOPES)
+    flow.redirect_uri = redirect_uri
+    auth_url, _ = flow.authorization_url(prompt='consent', access_type='offline')
+    return {"auth_url": auth_url, "code_verifier": flow.code_verifier}
 
 
 @app.post("/api/gmail/connect")
-async def gmail_connect():
+async def gmail_connect(req: AuthCodeRequest):
     if not os.path.exists(CREDENTIALS_PATH):
-        return JSONResponse(status_code=400, content={"error": "credentials.json missing"})
+        return JSONResponse(status_code=400, content={"error": "credentials.json missing on server"})
     
-    flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, GMAIL_SCOPES)
-    # run_local_server will open the system browser and block until auth is done
-    creds = flow.run_local_server(port=0, open_browser=True)
-    
-    with open(TOKEN_PATH, "w") as token:
-        token.write(creds.to_json())
-    
-    return {"status": "connected"}
+    try:
+        flow = Flow.from_client_secrets_file(CREDENTIALS_PATH, scopes=GMAIL_SCOPES)
+        flow.redirect_uri = req.redirect_uri
+        flow.fetch_token(code=req.code, code_verifier=req.code_verifier)
+        creds = flow.credentials
+        
+        # Get user email
+        oauth2_service = build("oauth2", "v2", credentials=creds)
+        user_info = oauth2_service.userinfo().get().execute()
+        email = user_info.get("email")
+        
+        if not email:
+            return JSONResponse(status_code=400, content={"error": "Could not retrieve email from Google"})
+            
+        # Save token to GCS
+        write_gcs(f"users/{email}/token.json", creds.to_json().encode('utf-8'), "application/json")
+        
+        # Create session JWT
+        token = jwt.encode({"email": email}, JWT_SECRET, algorithm="HS256")
+        
+        return {"status": "connected", "token": token, "email": email}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 
 @app.post("/api/gmail/disconnect")
-async def gmail_disconnect():
-    if os.path.exists(TOKEN_PATH):
-        os.remove(TOKEN_PATH)
+async def gmail_disconnect(email: str = Depends(get_current_user)):
+    delete_gcs(f"users/{email}/token.json")
     return {"status": "disconnected"}
 
 
 @app.post("/api/extract-jd")
-async def extract_jd(files: List[UploadFile] = File(...)):
+async def extract_jd(files: List[UploadFile] = File(...), email: str = Depends(get_current_user)):
     if not os.getenv("GEMINI_API_KEY"):
         return JSONResponse(status_code=500, content={"error": "GEMINI_API_KEY not set in .env"})
 
@@ -186,14 +257,25 @@ async def extract_jd(files: List[UploadFile] = File(...)):
 
 
 @app.post("/api/generate-draft")
-async def generate_draft(req: DraftRequest):
+async def generate_draft(req: DraftRequest, email: str = Depends(get_current_user)):
     if not os.getenv("GEMINI_API_KEY"):
         return JSONResponse(status_code=500, content={"error": "GEMINI_API_KEY not set"})
         
-    profile = {"work_experience": "", "projects": "", "cover_letter": ""}
-    if os.path.exists(PROFILE_PATH):
-        with open(PROFILE_PATH, "r") as f:
-            profile = json.load(f)
+    profile = {"name": "", "phone": "", "linkedin": "", "work_experience": "", "projects": "", "cover_letter": ""}
+    profile_data = read_gcs(f"users/{email}/profile.json")
+    if profile_data:
+        profile = json.loads(profile_data.decode('utf-8'))
+
+    # Build signature dynamically from the logged-in user's profile
+    sender_name = profile.get("name") or email.split("@")[0]
+    sender_phone = profile.get("phone", "")
+    sender_linkedin = profile.get("linkedin", "")
+    signature_lines = [f"\nBest regards,\n\n{sender_name}", email]
+    if sender_phone:
+        signature_lines.append(sender_phone)
+    if sender_linkedin:
+        signature_lines.append(sender_linkedin)
+    signature = "\n".join(signature_lines)
 
     prompt = f"""
     You are an expert career consultant drafting a cold email to apply for a job.
@@ -213,16 +295,10 @@ async def generate_draft(req: DraftRequest):
     2. The Subject line MUST be strictly formatted as exactly: "{req.job_title} Role" (do not add the candidate's name or university).
     3. Match the tone of the provided cover letter template, but customize the content to directly address the Job Requirements using facts from the Candidate Profile.
     4. Keep it crisp, highly professional, and ready to send.
-    5. You MUST end the email body with this exact signature, without altering it or making up other details:
-       
-       Best regards,
-       
-       Sonu Kumar
-       sonu.ku.engg@gmail.com
-       +918434011521
-       linkedin.com/in/me19b173
-       
-    6. Return ONLY the raw email text (Subject line first, then a couple blank lines, then the body). Do not wrap in markdown quotes.
+    5. CRITICAL FORMATTING RULE: Do NOT use any markdown formatting. No **bold**, no *italic*, no bullet dashes with asterisks. Use plain text only. For bullet points, use a simple hyphen followed by a space (e.g., "- Point one").
+    6. You MUST end the email body with EXACTLY this signature block and nothing else after it:
+{signature}
+    7. Return ONLY the raw email text (Subject line first, then a blank line, then the body). Do not wrap in markdown quotes.
     """
 
     try:
@@ -233,39 +309,49 @@ async def generate_draft(req: DraftRequest):
 
 
 @app.post("/api/send-email")
-async def send_email(req: SendEmailRequest):
-    service = get_gmail_service()
+async def send_email(req: SendEmailRequest, email: str = Depends(get_current_user)):
+    service = get_gmail_service(email)
     if not service:
         return JSONResponse(status_code=401, content={"error": "Gmail is not connected. Please connect from Profile."})
         
     try:
-        message = EmailMessage()
-        message.set_content(req.body)
+        import email.mime.multipart as mime_mp
+        import email.mime.text as mime_text
+        import email.mime.base as mime_base
+        import email.mime.application as mime_app
+        from email import encoders as email_encoders
+
+        # Build multipart message (plain + HTML) for proper Gmail rendering
+        message = mime_mp.MIMEMultipart("mixed")
         message["To"] = req.to_email
         message["Subject"] = req.subject
-        
-        # Determine sender email to populate "From" header
-        try:
-            profile = service.users().getProfile(userId='me').execute()
-            message["From"] = profile.get("emailAddress", "me")
-        except:
-            message["From"] = "me"
-        
+        message["From"] = email
+
+        # Convert plain text body to HTML (preserves line breaks, full-width layout)
+        html_body = "<html><body style=\"font-family: Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #222;\">"
+        for line in req.body.splitlines():
+            stripped = line.strip()
+            if stripped:
+                html_body += f"<p style=\"margin: 0 0 8px 0;\">{stripped}</p>"
+            else:
+                html_body += "<br>"
+        html_body += "</body></html>"
+
+        # Attach plain text and HTML alternatives
+        alt_part = mime_mp.MIMEMultipart("alternative")
+        alt_part.attach(mime_text.MIMEText(req.body, "plain"))
+        alt_part.attach(mime_text.MIMEText(html_body, "html"))
+        message.attach(alt_part)
+
         # Attach resume if exists
-        if os.path.exists(RESUME_PATH):
-            mime_type, _ = mimetypes.guess_type(RESUME_PATH)
-            if not mime_type:
-                mime_type = "application/pdf"
-            main_type, sub_type = mime_type.split("/", 1)
-            
-            with open(RESUME_PATH, "rb") as f:
-                message.add_attachment(
-                    f.read(),
-                    maintype=main_type,
-                    subtype=sub_type,
-                    filename="resume.pdf"
-                )
-        
+        resume_data = read_gcs(f"users/{email}/resume.pdf")
+        if resume_data:
+            pdf_part = mime_base.MIMEBase("application", "pdf")
+            pdf_part.set_payload(resume_data)
+            email_encoders.encode_base64(pdf_part)
+            pdf_part.add_header("Content-Disposition", "attachment", filename="resume.pdf")
+            message.attach(pdf_part)
+
         encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
         create_message = {"raw": encoded_message}
         
@@ -281,14 +367,14 @@ async def send_email(req: SendEmailRequest):
 
 
 @app.post("/api/form-qa")
-async def generate_form_qa(req: FormQARequest):
+async def generate_form_qa(req: FormQARequest, email: str = Depends(get_current_user)):
     if not os.getenv("GEMINI_API_KEY"):
         return JSONResponse(status_code=500, content={"error": "GEMINI_API_KEY not set"})
         
     profile = {"work_experience": "", "projects": ""}
-    if os.path.exists(PROFILE_PATH):
-        with open(PROFILE_PATH, "r") as f:
-            profile = json.load(f)
+    profile_data = read_gcs(f"users/{email}/profile.json")
+    if profile_data:
+        profile = json.loads(profile_data.decode('utf-8'))
 
     prompt = f"""
     You are an expert career consultant answering job application forms for a candidate.
@@ -326,33 +412,31 @@ async def generate_form_qa(req: FormQARequest):
 
 
 @app.get("/api/profile")
-async def get_profile():
-    if os.path.exists(PROFILE_PATH):
-        with open(PROFILE_PATH, "r") as f:
-            return json.load(f)
+async def get_profile(email: str = Depends(get_current_user)):
+    profile_data = read_gcs(f"users/{email}/profile.json")
+    if profile_data:
+        return json.loads(profile_data.decode('utf-8'))
     return {"work_experience": "", "projects": "", "cover_letter": ""}
 
 
 @app.post("/api/profile")
-async def save_profile(profile: ProfileData):
-    with open(PROFILE_PATH, "w") as f:
-        json.dump(profile.model_dump(), f, indent=2)
+async def save_profile(profile: ProfileData, email: str = Depends(get_current_user)):
+    write_gcs(f"users/{email}/profile.json", json.dumps(profile.model_dump(), indent=2).encode('utf-8'), "application/json")
     return {"status": "saved"}
 
 
 @app.post("/api/resume")
-async def upload_resume(file: UploadFile = File(...)):
+async def upload_resume(file: UploadFile = File(...), email: str = Depends(get_current_user)):
     if not file.filename.lower().endswith(".pdf"):
         return JSONResponse(status_code=400, content={"error": "Only PDF files are accepted"})
     content = await file.read()
-    with open(RESUME_PATH, "wb") as f:
-        f.write(content)
+    write_gcs(f"users/{email}/resume.pdf", content, "application/pdf")
     return {"status": "uploaded", "filename": file.filename, "size_bytes": len(content)}
 
 
 @app.get("/api/resume/status")
-async def resume_status():
-    if os.path.exists(RESUME_PATH):
-        size = os.path.getsize(RESUME_PATH)
-        return {"exists": True, "size_bytes": size}
+async def resume_status(email: str = Depends(get_current_user)):
+    data = read_gcs(f"users/{email}/resume.pdf")
+    if data:
+        return {"exists": True, "size_bytes": len(data)}
     return {"exists": False}

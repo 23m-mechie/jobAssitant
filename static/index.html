@@ -386,7 +386,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .save-status {
@@ -428,10 +430,79 @@
         .toast.error {
             border-color: var(--danger);
         }
+
+        /* ── Mobile Responsiveness ── */
+        @media (max-width: 768px) {
+            header {
+                padding: 20px 20px 0;
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .logo {
+                padding-bottom: 5px;
+            }
+
+            nav {
+                margin-left: 0;
+                width: 100%;
+                justify-content: center;
+            }
+
+            nav button {
+                padding: 10px 14px;
+                font-size: 0.7rem;
+            }
+
+            main {
+                padding: 20px 16px;
+            }
+
+            .status-bar {
+                display: none;
+            }
+
+            .toast {
+                right: 16px;
+                left: 16px;
+                top: 16px;
+                font-size: 0.72rem;
+                justify-content: center;
+            }
+
+            .form-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .form-actions button {
+                width: 100%;
+                justify-content: center;
+            }
+        }
     </style>
 </head>
 
 <body>
+
+    <!-- Login Overlay -->
+    <div id="login-overlay"
+        style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 9999; flex-direction: column; align-items: center; justify-content: center;">
+        <div
+            style="background: var(--surface); padding: 40px; border-radius: 12px; border: 1px solid var(--border); text-align: center; max-width: 400px; width: 90%;">
+            <h1 style="margin-bottom: 10px; font-size: 1.5rem; color: var(--text); font-family: 'Syne', sans-serif;">
+                apply.ai</h1>
+            <p style="color: var(--muted); margin-bottom: 30px; font-size: 0.82rem; line-height: 1.6;">Connect your
+                Gmail account to get started. Your data is stored securely in the cloud.</p>
+            <button type="button" class="btn-primary" id="login-btn" onclick="startLogin()"
+                style="width: 100%; justify-content: center; padding: 14px 28px;">
+                <span class="btn-label">Login with Google</span>
+                <span class="btn-spinner" id="login-spinner" style="display:none; border-top-color: #0d0f12;"></span>
+            </button>
+            <p id="login-error" style="color: #ff4a4a; margin-top: 15px; font-size: 0.85rem; display: none;"></p>
+        </div>
+    </div>
 
     <header>
         <div class="logo">apply<span>.ai</span></div>
@@ -449,26 +520,44 @@
             <div class="section-header">
                 <div class="tag">Setup</div>
                 <h1>Your Profile</h1>
-                <p>Paste your experience, projects and cover letter once. Saved locally — used for every application.</p>
+                <p>Paste your experience, projects and cover letter once. Saved locally — used for every application.
+                </p>
             </div>
 
             <form id="profile-form" autocomplete="off">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="full-name">Full Name</label>
+                        <input type="text" id="full-name" placeholder="e.g. Sonu Kumar" style="width:100%; padding:12px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none;" />
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="phone-number">Phone Number</label>
+                        <input type="text" id="phone-number" placeholder="e.g. +918434011521" style="width:100%; padding:12px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none;" />
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="linkedin-profile">LinkedIn Profile URL</label>
+                        <input type="text" id="linkedin-profile" placeholder="e.g. linkedin.com/in/me19b173" style="width:100%; padding:12px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none;" />
+                    </div>
+                </div>
                 <div class="form-group">
                     <label for="work-experience">Work Experience</label>
                     <span class="label-hint">Roles, companies, durations — one per line or freeform</span>
-                    <textarea id="work-experience" rows="6" placeholder="e.g. Software Engineer @ Google (2022–2024)&#10;Built microservices handling 10M req/day..."></textarea>
+                    <textarea id="work-experience" rows="6"
+                        placeholder="e.g. Software Engineer @ Google (2022–2024)&#10;Built microservices handling 10M req/day..."></textarea>
                 </div>
 
                 <div class="form-group">
                     <label for="projects">Projects</label>
                     <span class="label-hint">Side projects, open-source, academic — with tech stack</span>
-                    <textarea id="projects" rows="6" placeholder="e.g. ChatBot Platform — React, FastAPI, Redis&#10;Real-time AI chatbot with 5k daily users..."></textarea>
+                    <textarea id="projects" rows="6"
+                        placeholder="e.g. ChatBot Platform — React, FastAPI, Redis&#10;Real-time AI chatbot with 5k daily users..."></textarea>
                 </div>
 
                 <div class="form-group">
                     <label for="cover-letter">Cover Letter Template</label>
                     <span class="label-hint">Your base cover letter — AI will adapt it per job</span>
-                    <textarea id="cover-letter" rows="8" placeholder="Dear Hiring Manager,&#10;&#10;I am writing to express my interest in..."></textarea>
+                    <textarea id="cover-letter" rows="8"
+                        placeholder="Dear Hiring Manager,&#10;&#10;I am writing to express my interest in..."></textarea>
                 </div>
 
                 <!-- Resume Upload -->
@@ -495,27 +584,35 @@
                 <div class="form-group" style="margin-top: 40px;">
                     <label>Gmail Connection</label>
                     <span class="label-hint">Used to send application emails with your resume attached</span>
-                    <div class="gmail-card" id="gmail-card" style="border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; background: var(--surface);">
+                    <div class="gmail-card" id="gmail-card"
+                        style="border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; background: var(--surface);">
                         <div id="gmail-disconnected">
-                             <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
                                 <div>
-                                    <h2 style="font-family: 'Syne', sans-serif; font-size: 1rem; margin-bottom: 4px;">Not Connected</h2>
-                                    <p style="margin: 0; font-size: 0.75rem; color: var(--muted);">Authorize this app to send emails on your behalf.</p>
+                                    <h2 style="font-family: 'Syne', sans-serif; font-size: 1rem; margin-bottom: 4px;">
+                                        Not Connected</h2>
+                                    <p style="margin: 0; font-size: 0.75rem; color: var(--muted);">Authorize this app to
+                                        send emails on your behalf.</p>
                                 </div>
-                                <button type="button" class="btn-primary" id="connect-gmail-btn" onclick="connectGmail()" style="padding: 10px 20px;">
+                                <button type="button" class="btn-primary" id="connect-gmail-btn" onclick="startLogin()"
+                                    style="padding: 10px 20px;">
                                     <span class="btn-label">Connect</span>
-                                    <span class="btn-spinner" id="gmail-spinner" style="display:none;"></span>
                                 </button>
-                             </div>
+                            </div>
                         </div>
                         <div id="gmail-connected" style="display: none;">
-                             <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
                                 <div>
-                                    <h2 style="font-family: 'Syne', sans-serif; font-size: 1rem; margin-bottom: 4px; color: var(--accent);">✓ Connected</h2>
-                                    <p style="margin: 0; font-size: 0.85rem; color: var(--text); font-family: 'DM Mono', monospace;" id="gmail-email">user@gmail.com</p>
+                                    <h2
+                                        style="font-family: 'Syne', sans-serif; font-size: 1rem; margin-bottom: 4px; color: var(--accent);">
+                                        ✓ Connected</h2>
+                                    <p style="margin: 0; font-size: 0.85rem; color: var(--text); font-family: 'DM Mono', monospace;"
+                                        id="gmail-email">user@gmail.com</p>
                                 </div>
-                                <button type="button" class="upload-replace" style="border-color: #ff5f5f; color: #ff5f5f;" onclick="disconnectGmail()">Disconnect</button>
-                             </div>
+                                <button type="button" class="upload-replace"
+                                    style="border-color: #ff5f5f; color: #ff5f5f;"
+                                    onclick="logout()">Disconnect</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -537,19 +634,23 @@
                 <h1>New Application</h1>
                 <p>Upload JD screenshots → AI extracts details → drafts your email → you approve → sent.</p>
             </div>
-            
+
             <div id="jd-upload-step">
                 <div class="form-group">
                     <label>JD Screenshots</label>
                     <span class="label-hint">Upload 1-3 screenshots of the job posting (LinkedIn, Indeed, etc.)</span>
-                    <div class="upload-zone" id="jd-upload-zone" style="min-height: 180px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                    <div class="upload-zone" id="jd-upload-zone"
+                        style="min-height: 180px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
                         <input type="file" id="jd-input" accept="image/*" multiple hidden />
                         <div id="jd-upload-placeholder">
-                            <span class="upload-icon" style="font-size: 2.5rem; display: block; margin-bottom: 10px;">📸</span>
+                            <span class="upload-icon"
+                                style="font-size: 2.5rem; display: block; margin-bottom: 10px;">📸</span>
                             <p class="upload-text">Drop screenshots here or <span class="upload-link">browse</span></p>
                             <p class="upload-hint">PNG, JPG · 1-3 images</p>
                         </div>
-                        <div id="jd-previews" style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 16px;"></div>
+                        <div id="jd-previews"
+                            style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 16px;">
+                        </div>
                     </div>
                 </div>
                 <div class="form-actions" id="jd-extract-actions" style="display: none; justify-content: center;">
@@ -562,32 +663,37 @@
             </div>
 
             <!-- Extracted Results -->
-            <div id="jd-result-step" style="display: none; border-top: 1px solid var(--border); padding-top: 32px; margin-top: 32px; animation: fadeIn 0.3s ease;">
+            <div id="jd-result-step"
+                style="display: none; border-top: 1px solid var(--border); padding-top: 32px; margin-top: 32px; animation: fadeIn 0.3s ease;">
                 <div class="tag" style="background: var(--accent-dim); margin-bottom: 20px;">Review Extraction</div>
-                
+
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                     <div class="form-group">
                         <label>Job Title</label>
-                        <input type="text" id="result-title" style="width:100%; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none;" />
+                        <input type="text" id="result-title"
+                            style="width:100%; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none;" />
                     </div>
                     <div class="form-group">
                         <label>Company</label>
-                        <input type="text" id="result-company" style="width:100%; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none;" />
+                        <input type="text" id="result-company"
+                            style="width:100%; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none;" />
                     </div>
                 </div>
-                
+
                 <div class="form-group">
                     <label>Recipient Email</label>
                     <span class="label-hint">Where the application will be sent</span>
-                    <input type="text" id="result-email" placeholder="e.g. hr@company.com" style="width:100%; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none;" />
+                    <input type="text" id="result-email" placeholder="e.g. hr@company.com"
+                        style="width:100%; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none;" />
                 </div>
-                
+
                 <div class="form-group">
                     <label>Requirements Summary</label>
                     <span class="label-hint">Key skills and experience extracted from the JD</span>
-                    <textarea id="result-requirements" rows="6" style="width:100%; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none; line-height: 1.6;"></textarea>
+                    <textarea id="result-requirements" rows="6"
+                        style="width:100%; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none; line-height: 1.6;"></textarea>
                 </div>
-                
+
                 <div class="form-actions">
                     <button type="button" class="btn-primary" id="generate-draft-btn" onclick="proceedToDraft()">
                         <span class="btn-label">Next: Generate Draft</span>
@@ -598,29 +704,35 @@
             </div>
 
             <!-- Email Draft Step -->
-            <div id="jd-draft-step" style="display: none; border-top: 1px solid var(--border); padding-top: 32px; margin-top: 32px; animation: fadeIn 0.3s ease;">
+            <div id="jd-draft-step"
+                style="display: none; border-top: 1px solid var(--border); padding-top: 32px; margin-top: 32px; animation: fadeIn 0.3s ease;">
                 <div class="tag" style="background: #a970ff; margin-bottom: 20px;">Review Draft</div>
-                
+
                 <div class="form-group">
                     <label>To:</label>
-                    <input type="text" id="draft-to-email" style="width:100%; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none; margin-bottom: 20px;" />
+                    <input type="text" id="draft-to-email"
+                        style="width:100%; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none; margin-bottom: 20px;" />
                 </div>
-                
+
                 <div class="form-group">
                     <label>Subject:</label>
-                    <input type="text" id="draft-subject" style="width:100%; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none; margin-bottom: 20px;" />
+                    <input type="text" id="draft-subject"
+                        style="width:100%; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none; margin-bottom: 20px;" />
                 </div>
-                
+
                 <div class="form-group" style="position: relative;">
                     <label>Email Body</label>
                     <span class="label-hint">Customize as needed before sending</span>
-                    <textarea id="draft-body" rows="12" style="width:100%; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none; line-height: 1.6;"></textarea>
+                    <textarea id="draft-body" rows="12"
+                        style="width:100%; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none; line-height: 1.6;"></textarea>
                 </div>
-                
+
                 <div class="form-actions">
-                    <button type="button" class="btn-primary" id="send-email-btn" onclick="sendApplicationEmail()" style="background: #a970ff; color: #fff;">
+                    <button type="button" class="btn-primary" id="send-email-btn" onclick="sendApplicationEmail()"
+                        style="background: #a970ff; color: #fff;">
                         <span class="btn-label">Send Application</span>
-                        <span class="btn-spinner" id="send-spinner" style="display:none; border-top-color: #fff;"></span>
+                        <span class="btn-spinner" id="send-spinner"
+                            style="display:none; border-top-color: #fff;"></span>
                     </button>
                 </div>
             </div>
@@ -633,13 +745,15 @@
                 <h1>Form Q&amp;A</h1>
                 <p>Paste Google Form questions — AI answers them using your profile. Copy and fill.</p>
             </div>
-            
+
             <div class="form-group" style="position: relative;">
                 <label>Paste Questions Here</label>
                 <span class="label-hint">Copy-paste the raw text of the application form questions</span>
-                <textarea id="qa-input" rows="8" style="width:100%; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none; line-height: 1.6;" placeholder="1. What is your biggest engineering achievement?&#10;2. Why do you want to join our company?"></textarea>
+                <textarea id="qa-input" rows="8"
+                    style="width:100%; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; outline: none; line-height: 1.6;"
+                    placeholder="1. What is your biggest engineering achievement?&#10;2. Why do you want to join our company?"></textarea>
             </div>
-            
+
             <div class="form-actions" style="margin-bottom: 40px;">
                 <button type="button" class="btn-primary" id="generate-qa-btn" onclick="answerFormQuestions()">
                     <span class="btn-label">Generate Answers</span>
@@ -680,7 +794,6 @@
             const toast = document.getElementById('toast');
             toast.textContent = message;
             toast.className = 'toast' + (isError ? ' error' : '');
-            // trigger reflow then show
             requestAnimationFrame(() => {
                 toast.classList.add('show');
             });
@@ -694,11 +807,19 @@
             return (bytes / 1048576).toFixed(1) + ' MB';
         }
 
+        function getAuthHeaders() {
+            const token = localStorage.getItem('jwt_token');
+            return token ? { 'Authorization': `Bearer ${token}` } : {};
+        }
+
         // ── Profile: Load ──
         async function loadProfile() {
             try {
-                const res = await fetch('/api/profile');
+                const res = await fetch('/api/profile', { headers: getAuthHeaders() });
                 const data = await res.json();
+                document.getElementById('full-name').value = data.name || '';
+                document.getElementById('phone-number').value = data.phone || '';
+                document.getElementById('linkedin-profile').value = data.linkedin || '';
                 document.getElementById('work-experience').value = data.work_experience || '';
                 document.getElementById('projects').value = data.projects || '';
                 document.getElementById('cover-letter').value = data.cover_letter || '';
@@ -719,7 +840,10 @@
             label.textContent = 'Saving…';
 
             try {
-                const body = {
+                const payload = {
+                    name: document.getElementById('full-name').value,
+                    phone: document.getElementById('phone-number').value,
+                    linkedin: document.getElementById('linkedin-profile').value,
                     work_experience: document.getElementById('work-experience').value,
                     projects: document.getElementById('projects').value,
                     cover_letter: document.getElementById('cover-letter').value,
@@ -727,11 +851,11 @@
 
                 const res = await fetch('/api/profile', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body),
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                    body: JSON.stringify(payload)
                 });
 
-                if (!res.ok) throw new Error('Save failed');
+                if (!res.ok) throw new Error('API failed');
 
                 showToast('✓ Profile saved');
                 status.textContent = 'Saved just now';
@@ -761,7 +885,11 @@
             formData.append('file', file);
 
             try {
-                const res = await fetch('/api/resume', { method: 'POST', body: formData });
+                const res = await fetch('/api/resume', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: formData
+                });
                 if (!res.ok) throw new Error('Upload failed');
                 const data = await res.json();
                 showResumeUploaded(data.filename, data.size_bytes);
@@ -781,7 +909,7 @@
         // ── Resume: Check status on load ──
         async function checkResumeStatus() {
             try {
-                const res = await fetch('/api/resume/status');
+                const res = await fetch('/api/resume/status', { headers: getAuthHeaders() });
                 const data = await res.json();
                 if (data.exists) {
                     showResumeUploaded('resume.pdf', data.size_bytes);
@@ -796,7 +924,6 @@
         const resumeInput = document.getElementById('resume-input');
 
         uploadZone.addEventListener('click', () => {
-            // Don't trigger file pick if clicking Replace button
             resumeInput.click();
         });
 
@@ -804,7 +931,6 @@
             if (e.target.files[0]) uploadResume(e.target.files[0]);
         });
 
-        // Drag and drop
         uploadZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadZone.classList.add('dragover');
@@ -821,7 +947,6 @@
             if (file) uploadResume(file);
         });
 
-        // Replace button
         document.getElementById('upload-replace').addEventListener('click', (e) => {
             e.stopPropagation();
             document.getElementById('upload-content').style.display = 'block';
@@ -830,7 +955,6 @@
             resumeInput.click();
         });
 
-        // ── Form submit ──
         document.getElementById('profile-form').addEventListener('submit', (e) => {
             e.preventDefault();
             saveProfile();
@@ -839,7 +963,7 @@
         // ── Gmail: Status ──
         async function checkGmailStatus() {
             try {
-                const res = await fetch('/api/gmail/status');
+                const res = await fetch('/api/gmail/status', { headers: getAuthHeaders() });
                 const data = await res.json();
                 const connectedDiv = document.getElementById('gmail-connected');
                 const disconnectedDiv = document.getElementById('gmail-disconnected');
@@ -861,62 +985,101 @@
             }
         }
 
-        // ── Gmail: Connect ──
-        async function connectGmail() {
-            const btn = document.getElementById('connect-gmail-btn');
-            const spinner = document.getElementById('gmail-spinner');
-            const label = btn.querySelector('.btn-label');
+        // ── Auth Flow ──
+        async function checkAuth() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
 
-            btn.disabled = true;
-            spinner.style.display = 'inline-block';
-            label.textContent = 'Auth…';
+            if (code) {
+                document.getElementById('login-btn').disabled = true;
+                document.getElementById('login-spinner').style.display = 'inline-block';
+                document.querySelector('#login-btn .btn-label').textContent = 'Authenticating...';
 
-            showToast('Opening browser for Google login...');
+                try {
+                    const redirectUri = window.location.origin + window.location.pathname;
+                    const codeVerifier = sessionStorage.getItem('code_verifier');
+                    const res = await fetch('/api/gmail/connect', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            code: code, 
+                            redirect_uri: redirectUri,
+                            code_verifier: codeVerifier || ''
+                        })
+                    });
+                    const data = await res.json();
 
-            try {
-                const res = await fetch('/api/gmail/connect', { method: 'POST' });
-                if (!res.ok) {
-                    const err = await res.json();
-                    throw new Error(err.error || 'Connection failed');
+                    if (!res.ok) throw new Error(data.error || 'Login failed');
+
+                    localStorage.setItem('jwt_token', data.token);
+                    sessionStorage.removeItem('code_verifier');
+                    window.history.replaceState({}, document.title, redirectUri);
+                    document.getElementById('login-overlay').style.display = 'none';
+                    initApp();
+                } catch (e) {
+                    document.getElementById('login-error').textContent = e.message;
+                    document.getElementById('login-error').style.display = 'block';
+                    document.getElementById('login-btn').disabled = false;
+                    document.getElementById('login-spinner').style.display = 'none';
+                    document.querySelector('#login-btn .btn-label').textContent = 'Login with Google';
                 }
-                
-                await checkGmailStatus();
-                showToast('✓ Gmail connected successfully');
-                checkHealth(); // Update status bar
-            } catch (e) {
-                showToast('✗ ' + e.message, true);
-                console.error(e);
-            } finally {
-                btn.disabled = false;
-                spinner.style.display = 'none';
-                label.textContent = 'Connect';
+                return;
+            }
+
+            const token = localStorage.getItem('jwt_token');
+            if (!token) {
+                document.getElementById('login-overlay').style.display = 'flex';
+            } else {
+                document.getElementById('login-overlay').style.display = 'none';
+                initApp();
             }
         }
 
-        // ── Gmail: Disconnect ──
-        async function disconnectGmail() {
-            if (!confirm('Disconnect Gmail and delete saved token?')) return;
-            
+        async function startLogin() {
+            const btn = document.getElementById('login-btn');
+            btn.disabled = true;
+            document.getElementById('login-spinner').style.display = 'inline-block';
+            document.querySelector('#login-btn .btn-label').textContent = 'Redirecting...';
+
             try {
-                await fetch('/api/gmail/disconnect', { method: 'POST' });
-                await checkGmailStatus();
-                showToast('Gmail disconnected');
-                checkHealth(); // Update status bar
+                const redirectUri = window.location.origin + window.location.pathname;
+                const res = await fetch(`/api/gmail/auth-url?redirect_uri=${encodeURIComponent(redirectUri)}`);
+                const data = await res.json();
+                if (data.auth_url) {
+                    sessionStorage.setItem('code_verifier', data.code_verifier);
+                    window.location.href = data.auth_url;
+                } else {
+                    throw new Error("Failed to get auth URL");
+                }
             } catch (e) {
-                showToast('✗ Failed to disconnect', true);
+                document.getElementById('login-error').textContent = e.message;
+                document.getElementById('login-error').style.display = 'block';
+                btn.disabled = false;
+                document.getElementById('login-spinner').style.display = 'none';
+                document.querySelector('#login-btn .btn-label').textContent = 'Login with Google';
             }
+        }
+
+        async function logout() {
+            try {
+                await fetch('/api/gmail/disconnect', {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+            } catch (e) { }
+            localStorage.removeItem('jwt_token');
+            window.location.reload();
         }
 
         // ── Health check ──
         async function checkHealth() {
             try {
-                const res = await fetch('/api/health');
+                const res = await fetch('/api/health', { headers: getAuthHeaders() });
                 const data = await res.json();
                 const dot = document.getElementById('status-dot');
                 const txt = document.getElementById('status-text');
-                
-                // Also check Gmail status specifically for the email
-                const gmailRes = await fetch('/api/gmail/status');
+
+                const gmailRes = await fetch('/api/gmail/status', { headers: getAuthHeaders() });
                 const gmailData = await gmailRes.json();
 
                 if (data.status === 'ok') {
@@ -960,7 +1123,7 @@
         function handleJDFiles(files) {
             const newFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
             if (newFiles.length === 0) return;
-            
+
             selectedFiles = [...selectedFiles, ...newFiles].slice(0, 3);
             renderPreviews();
             jdActions.style.display = 'flex';
@@ -1000,13 +1163,10 @@
             document.getElementById('jd-upload-step').style.display = 'block';
             document.getElementById('jd-result-step').style.display = 'none';
             document.getElementById('jd-upload-placeholder').style.display = 'block';
-            
-            // Clear results
             document.getElementById('result-title').value = '';
             document.getElementById('result-company').value = '';
             document.getElementById('result-email').value = '';
             document.getElementById('result-requirements').value = '';
-            
             document.getElementById('jd-draft-step').style.display = 'none';
             document.getElementById('draft-to-email').value = '';
             document.getElementById('draft-subject').value = '';
@@ -1031,13 +1191,14 @@
             try {
                 const res = await fetch('/api/extract-jd', {
                     method: 'POST',
+                    headers: getAuthHeaders(),
                     body: formData
                 });
 
                 if (!res.ok) throw new Error('Extraction failed');
 
                 const data = await res.json();
-                
+
                 document.getElementById('result-title').value = data.job_title || '';
                 document.getElementById('result-company').value = data.company || '';
                 document.getElementById('result-email').value = data.recipient_email || '';
@@ -1061,7 +1222,7 @@
             const company = document.getElementById('result-company').value;
             const requirements = document.getElementById('result-requirements').value;
             const email = document.getElementById('result-email').value;
-            
+
             if (!title && !company && !requirements) {
                 showToast('Please extract JD details first', true);
                 return;
@@ -1074,11 +1235,11 @@
             btn.disabled = true;
             spinner.style.display = 'inline-block';
             label.textContent = 'Drafting...';
-            
+
             try {
                 const res = await fetch('/api/generate-draft', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                     body: JSON.stringify({
                         job_title: title,
                         company: company,
@@ -1089,11 +1250,10 @@
                 if (!res.ok) throw new Error('API failed');
 
                 const data = await res.json();
-                
+
                 let rawDraft = data.draft_text || '';
                 let subject = '';
-                
-                // Super basic check to parse Subject out of draft text
+
                 let lines = rawDraft.split('\n');
                 if (lines[0].toLowerCase().startsWith('subject:')) {
                     subject = lines[0].replace(/subject:\s*/i, '').trim();
@@ -1103,9 +1263,8 @@
                 document.getElementById('draft-to-email').value = email || '';
                 document.getElementById('draft-subject').value = subject || `Application for ${title} at ${company}`;
                 document.getElementById('draft-body').value = rawDraft;
-                
+
                 document.getElementById('jd-draft-step').style.display = 'block';
-                // Scroll to draft step
                 document.getElementById('jd-draft-step').scrollIntoView({ behavior: 'smooth', block: 'start' });
                 showToast('✓ Draft generated successfully');
             } catch (e) {
@@ -1117,16 +1276,16 @@
                 label.textContent = 'Next: Generate Draft';
             }
         }
-        
+
         async function sendApplicationEmail() {
             const btn = document.getElementById('send-email-btn');
             const spinner = document.getElementById('send-spinner');
             const label = btn.querySelector('.btn-label');
-            
+
             const to = document.getElementById('draft-to-email').value;
             const subject = document.getElementById('draft-subject').value;
             const body = document.getElementById('draft-body').value;
-            
+
             if (!to) {
                 showToast('Please provide a recipient email', true);
                 return;
@@ -1135,11 +1294,11 @@
             btn.disabled = true;
             spinner.style.display = 'inline-block';
             label.textContent = 'Sending...';
-            
+
             try {
                 const res = await fetch('/api/send-email', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                     body: JSON.stringify({
                         to_email: to,
                         subject: subject,
@@ -1153,8 +1312,7 @@
                 }
 
                 showToast('🚀 Email sent successfully!');
-                
-                // Wait briefly, then reset the flow
+
                 setTimeout(() => {
                     resetJD();
                     document.getElementById('jd-upload-step').scrollIntoView({ behavior: 'smooth' });
@@ -1172,27 +1330,27 @@
         // ── Form Q&A ──
         async function answerFormQuestions() {
             const input = document.getElementById('qa-input').value.trim();
-            if(!input) {
+            if (!input) {
                 showToast("Please paste some questions first", true);
                 return;
             }
-            
+
             const btn = document.getElementById('generate-qa-btn');
             const spinner = document.getElementById('qa-spinner');
             const label = btn.querySelector('.btn-label');
             const resultsDiv = document.getElementById('qa-results');
             const container = document.getElementById('qa-cards-container');
-            
+
             btn.disabled = true;
             spinner.style.display = 'inline-block';
             label.textContent = 'Analyzing...';
             resultsDiv.style.display = 'none';
             container.innerHTML = '';
-            
+
             try {
                 const res = await fetch('/api/form-qa', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                     body: JSON.stringify({ questions: input })
                 });
 
@@ -1200,21 +1358,21 @@
 
                 const data = await res.json();
                 const answers = data.answers || [];
-                
-                if(answers.length === 0) {
+
+                if (answers.length === 0) {
                     showToast("No questions identified", true);
                     return;
                 }
-                
+
                 answers.forEach((item, index) => {
                     const card = document.createElement('div');
                     card.style.background = 'var(--surface)';
                     card.style.border = '1px solid var(--border)';
                     card.style.borderRadius = 'var(--radius)';
                     card.style.padding = '20px';
-                    
+
                     const copyId = `qa-ans-${index}`;
-                    
+
                     card.innerHTML = `
                         <h3 style="font-family:'Syne', sans-serif; font-size: 0.95rem; margin-bottom: 12px; color: var(--accent);">${item.question}</h3>
                         <div style="position: relative;">
@@ -1224,7 +1382,7 @@
                     `;
                     container.appendChild(card);
                 });
-                
+
                 resultsDiv.style.display = 'block';
                 showToast('✓ Answers generated');
             } catch (e) {
@@ -1236,23 +1394,25 @@
                 label.textContent = 'Generate Answers';
             }
         }
-        
+
         function copyToClipboard(elementId) {
             const el = document.getElementById(elementId);
             el.select();
             document.execCommand('copy');
             showToast('✓ Copied to clipboard');
-            // clear selection
             window.getSelection().removeAllRanges();
         }
 
         // ── Init ──
-        checkHealth();
-        loadProfile();
-        checkResumeStatus();
-        checkGmailStatus();
-    </script>
+        function initApp() {
+            checkHealth();
+            loadProfile();
+            checkResumeStatus();
+            checkGmailStatus();
+        }
 
+        checkAuth();
+    </script>
 </body>
 
 </html>
